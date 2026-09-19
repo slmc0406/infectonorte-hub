@@ -1,119 +1,38 @@
-import Link from 'next/link';
-import { SiteHeader } from '@/components/site-header';
-import { SiteFooter } from '@/components/site-footer';
-import { SearchBar } from '@/components/search-bar';
-import { ResourceCard } from '@/components/resource-card';
-import { Button } from '@/components/ui/button';
-import { getAllPublicResources } from '@/data/resources';
-import { getAreaIcon } from '@/lib/icons';
-import { ArrowRight } from 'lucide-react';
+import Link from "next/link";
+import { ArrowRight, Clock3, FileText, Sparkles } from "lucide-react";
+import { SiteHeader } from "@/components/site-header";
+import { SearchExperience } from "@/components/search-experience";
+import { ResourceCard } from "@/components/resource-card";
+import { formatCatalogDate, getPublicResources } from "@/lib/catalog";
+import { Button } from "@/components/ui/button";
+import { EcosystemBrand } from "@/components/brand";
 
-const quickAccess = [
-  { label: 'Algoritmos', href: '/biblioteca?tipo=algoritmo', icon: 'infectologia' },
-  { label: 'PROA', href: '/biblioteca?area=proa', icon: 'proa' },
-  { label: 'PCI', href: '/biblioteca?area=pci', icon: 'pci' },
-  { label: 'Vacunación', href: '/biblioteca?area=vacunacion', icon: 'vacunacion' },
-  { label: 'Pediatría', href: '/biblioteca?area=pediatria', icon: 'pediatria' },
-  { label: 'Microbiología', href: '/biblioteca?area=microbiologia', icon: 'microbiologia' },
-  { label: 'Epidemiología', href: '/biblioteca?area=epidemiologia', icon: 'epidemiologia' },
-  { label: 'Presentaciones', href: '/academia', icon: 'infectologia' },
-  { label: 'Infografías', href: '/biblioteca?tipo=infografia', icon: 'infectologia' },
-];
+export const dynamic = "force-dynamic";
 
-export default function HomePage() {
-  const resources = getAllPublicResources();
-  const featured = resources.slice(0, 4);
-  const recent = [...resources].sort((a, b) => +new Date(b.publishedAt) - +new Date(a.publishedAt)).slice(0, 5);
+export default async function Home() {
+  const resources = await getPublicResources();
+  const categoryCounts = Array.from(resources.reduce((map, resource) => {
+    map.set(resource.category, (map.get(resource.category) || 0) + 1);
+    return map;
+  }, new Map<string, number>())).sort((a, b) => b[1] - a[1]).slice(0, 8);
 
-  return (
-    <>
-      <div className="demo-banner">Entorno de demostración — MVP con datos simulados</div>
-      <SiteHeader />
-      <main>
-        {/* Hero */}
-        <section className="container-hub pt-16 pb-10 text-center sm:pt-24 sm:pb-16">
-          <h1 className="mx-auto max-w-2xl text-4xl font-semibold tracking-tight text-ink sm:text-5xl">
-            Infectonorte HUB
-          </h1>
-          <p className="mx-auto mt-4 max-w-lg text-lg text-ink-soft">
-            Conocimiento clínico. Disponible cuando lo necesitas.
-          </p>
-          <div className="mx-auto mt-8 max-w-2xl">
-            <SearchBar />
-          </div>
-        </section>
-
-        {/* Quick access */}
-        <section className="container-hub pb-16">
-          <div className="grid grid-cols-3 gap-3 sm:grid-cols-5 lg:grid-cols-9">
-            {quickAccess.map((item) => {
-              const Icon = getAreaIcon(item.icon);
-              return (
-                <Link
-                  key={item.label}
-                  href={item.href}
-                  className="group flex flex-col items-center gap-2 rounded-lg border border-transparent p-3 text-center hover:border-border hover:bg-white hover:shadow-subtle transition-all"
-                >
-                  <span className="flex h-11 w-11 items-center justify-center rounded-full bg-primary-50 text-primary-600 group-hover:bg-primary-500 group-hover:text-white transition-colors">
-                    <Icon size={20} strokeWidth={1.75} />
-                  </span>
-                  <span className="text-xs font-medium text-ink-soft">{item.label}</span>
-                </Link>
-              );
-            })}
-          </div>
-        </section>
-
-        {/* Destacados */}
-        <section className="container-hub pb-16">
-          <div className="mb-6 flex items-center justify-between">
-            <h2 className="text-xl font-semibold text-ink">Destacados</h2>
-            <Link href="/biblioteca" className="flex items-center gap-1 text-sm font-medium text-primary-600 hover:underline">
-              Ver biblioteca completa <ArrowRight size={14} />
-            </Link>
-          </div>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {featured.map((r) => (
-              <ResourceCard key={r.id} resource={r} />
-            ))}
-          </div>
-        </section>
-
-        {/* Actualizaciones recientes */}
-        <section className="container-hub pb-16">
-          <h2 className="mb-6 text-xl font-semibold text-ink">Actualizaciones recientes</h2>
-          <div className="divide-y divide-border rounded-lg border border-border bg-white">
-            {recent.map((r) => (
-              <Link
-                key={r.id}
-                href={`/${r.typePath}/${r.slug}`}
-                className="flex items-center justify-between gap-4 px-5 py-4 hover:bg-surface-sunken"
-              >
-                <div>
-                  <p className="font-medium text-ink">{r.title}</p>
-                  <p className="text-sm text-ink-faint">Publicado el {new Intl.DateTimeFormat('es-CO', { dateStyle: 'long' }).format(new Date(r.publishedAt))}</p>
-                </div>
-                <ArrowRight size={16} className="shrink-0 text-ink-faint" />
-              </Link>
-            ))}
-          </div>
-        </section>
-
-        {/* CTA institucional */}
-        <section className="container-hub pb-24">
-          <div className="rounded-xl bg-primary-500 px-8 py-12 text-center text-white sm:px-16">
-            <h2 className="text-2xl font-semibold">¿Perteneces a una institución?</h2>
-            <p className="mx-auto mt-2 max-w-md text-primary-100">
-              Ingresa a tu portal institucional para ver contenido exclusivo, adaptaciones locales y
-              actualizaciones de tu institución.
-            </p>
-            <Button href="/instituciones" variant="secondary" size="lg" className="mt-6">
-              Acceder a mi institución
-            </Button>
-          </div>
-        </section>
-      </main>
-      <SiteFooter />
-    </>
-  );
+  return <main>
+    <SiteHeader />
+    <section className="home-hero shell">
+      <div className="eyebrow"><Sparkles size={14} /> Conocimiento clínico curado por Infectonorte e Infectoped</div>
+      <h1>Encuentra lo que necesitas.<br /><span>Decide con confianza.</span></h1>
+      <p>Algoritmos, protocolos y herramientas clínicas publicados y disponibles cuando importa.</p>
+      <SearchExperience resources={resources} compact />
+      <div className="quick-terms"><span>Explora:</span><Link href="/biblioteca">Biblioteca clínica</Link><Link href="/academia">Academia</Link><Link href="/acceso-institucional">Mi institución</Link></div>
+    </section>
+    <section className="shell category-section">
+      <div className="section-heading"><div><span className="section-kicker">Explorar por área</span><h2>Todo el conocimiento, organizado.</h2></div><Button variant="ghost" asChild><Link href="/biblioteca">Ver biblioteca <ArrowRight /></Link></Button></div>
+      {categoryCounts.length ? <div className="category-grid">{categoryCounts.map(([label, count]) => <Link href={`/biblioteca?area=${encodeURIComponent(label)}`} className="category-card" key={label}><span className="category-icon"><FileText size={22} /></span><div><strong>{label}</strong><span>{count} {count === 1 ? "recurso" : "recursos"}</span></div><ArrowRight size={17} /></Link>)}</div> : <div className="catalog-empty"><FileText /><h3>La biblioteca está lista para recibir contenido</h3><p>Los recursos generales que publiques desde administración aparecerán aquí automáticamente.</p></div>}
+    </section>
+    {resources.length > 0 && <section className="soft-section"><div className="shell"><div className="section-heading"><div><span className="section-kicker">Selección reciente</span><h2>Últimos recursos publicados</h2></div></div><div className="resource-grid">{resources.slice(0, 3).map((resource) => <ResourceCard resource={resource} key={resource.id} />)}</div></div></section>}
+    {resources.length > 3 && <section className="shell update-section"><div className="section-heading"><div><span className="section-kicker">Al día</span><h2>Actualizaciones recientes</h2></div></div><div className="updates-list">{resources.slice(3, 8).map((item) => <Link href={`/recursos/${item.id}`} className="update-row" key={item.id}><Clock3 size={19} /><div><span>VERSIÓN {item.version}</span><strong>{item.title}</strong></div><time>{formatCatalogDate(item.updatedAt)}</time><ArrowRight size={18} /></Link>)}</div></section>}
+    <section className="institution-cta shell"><div><span className="section-kicker">Contenido adaptado a tu institución</span><h2>Protocolos locales. Un solo acceso.</h2><p>Escanea el QR institucional o ingresa para consultar recursos exclusivos y actualizaciones propias.</p></div><Button asChild size="lg"><Link href="/acceso-institucional">Acceder a mi institución <ArrowRight /></Link></Button></section>
+    <section className="brand-signature shell" aria-label="Marcas del ecosistema Infectonorte"><span>Un ecosistema de conocimiento clínico</span><EcosystemBrand /></section>
+    <footer className="footer"><div className="shell"><span>© 2026 Infectonorte HUB</span><span>Conocimiento clínico. Disponible cuando lo necesitas.</span></div></footer>
+  </main>;
 }

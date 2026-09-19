@@ -1,23 +1,24 @@
-import type { Metadata } from 'next';
-import { Inter } from 'next/font/google';
-import './globals.css';
-
-const inter = Inter({ subsets: ['latin'], variable: '--font-sans', display: 'swap' });
+import type { Metadata } from "next";
+import "./globals.css";
+import { Toaster } from "@/components/ui/sonner";
 
 export const metadata: Metadata = {
-  title: {
-    default: 'Infectonorte HUB — Conocimiento clínico',
-    template: '%s · Infectonorte HUB',
+  title: "Infectonorte HUB",
+  description: "Conocimiento clínico organizado, accesible y medible para las instituciones acompañadas por Infectonorte.",
+  icons: {
+    icon: "/favicon.svg",
+    shortcut: "/favicon.svg",
   },
-  description:
-    'Plataforma centralizada de conocimiento clínico de Infectonorte: algoritmos, protocolos, guías y herramientas para instituciones aliadas.',
-  metadataBase: new URL('https://hub.infectonorte.com'),
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
   return (
-    <html lang="es" className={inter.variable}>
-      <body className="min-h-screen font-sans">{children}</body>
+    <html lang="es">
+      <body className="antialiased">{children}<Toaster richColors position="top-right" closeButton /></body>
     </html>
   );
 }

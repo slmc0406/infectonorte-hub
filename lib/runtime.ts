@@ -1,0 +1,10 @@
+export function runtimeEnv() {
+  return {
+    ADMIN_EMAILS: process.env.ADMIN_EMAILS,
+    ADMIN_EMAIL: process.env.ADMIN_EMAIL,
+    ADMIN_PASSWORD: process.env.ADMIN_PASSWORD,
+    ADMIN_SESSION_SECRET: process.env.ADMIN_SESSION_SECRET,
+    INSTITUTION_SESSION_SECRET: process.env.INSTITUTION_SESSION_SECRET,
+    BACKUP_ENCRYPTION_SECRET: process.env.BACKUP_ENCRYPTION_SECRET,
+  };
+}

@@ -1,56 +1,13 @@
-import { Metadata } from 'next';
-import { SiteHeader } from '@/components/site-header';
-import { SiteFooter } from '@/components/site-footer';
-import { SearchBar } from '@/components/search-bar';
-import { FilterPanel } from '@/components/filter-panel';
-import { ResourceCard } from '@/components/resource-card';
-import { EmptyState } from '@/components/empty-state';
-import { getAllPublicResources } from '@/data/resources';
-import { searchResources } from '@/lib/search';
-import { parseSearchFilters, parseQuery } from '@/lib/query';
+import { FileText } from "lucide-react";
+import { SiteHeader } from "@/components/site-header";
+import { SearchExperience } from "@/components/search-experience";
+import { ResourceCard } from "@/components/resource-card";
+import { formatCatalogDate, getPublicResources } from "@/lib/catalog";
 
-export const metadata: Metadata = { title: 'Biblioteca general' };
+export const dynamic = "force-dynamic";
 
-export default function BibliotecaPage({ searchParams }: { searchParams: Record<string, string | string[] | undefined> }) {
-  const filters = parseSearchFilters(searchParams);
-  const q = parseQuery(searchParams);
-  const results = searchResources(getAllPublicResources(), q, filters);
-
-  return (
-    <>
-      <SiteHeader />
-      <main className="container-hub py-10">
-        <h1 className="text-2xl font-semibold text-ink">Biblioteca general</h1>
-        <p className="mt-1 text-ink-soft">Conocimiento clínico disponible para todas las instituciones.</p>
-
-        <div className="mt-6 max-w-xl">
-          <SearchBar size="md" action="/biblioteca" />
-        </div>
-
-        <div className="mt-8 grid grid-cols-1 gap-8 lg:grid-cols-[240px_1fr]">
-          <aside className="lg:sticky lg:top-24 lg:self-start">
-            <FilterPanel />
-          </aside>
-          <div>
-            <p className="mb-4 text-sm text-ink-faint">{results.length} recursos encontrados</p>
-            {results.length === 0 ? (
-              <EmptyState
-                title="No encontramos contenido con esos filtros"
-                description="Prueba quitando algún filtro, o cuéntanos qué necesitas."
-                actionLabel="Solicitar contenido"
-                actionHref="/solicitar-contenido"
-              />
-            ) : (
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-                {results.map((r) => (
-                  <ResourceCard key={r.id} resource={r} />
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-      </main>
-      <SiteFooter />
-    </>
-  );
+export default async function BibliotecaPage({ searchParams }: { searchParams: Promise<{ area?: string }> }) {
+  const resources = await getPublicResources();
+  const { area } = await searchParams;
+  return <main><SiteHeader /><section className="page-hero shell"><span className="section-kicker">Biblioteca clínica</span><h1>Conocimiento que encuentra su camino.</h1><p>Explora documentos generales publicados por Infectonorte con trazabilidad y control de versión.</p></section><section className="library-main library-full shell"><SearchExperience resources={resources} initialArea={area || "Todos"} /><div className="library-count"><strong>{resources.length} {resources.length === 1 ? "recurso publicado" : "recursos publicados"}</strong><span>{resources[0] ? `Actualizada ${formatCatalogDate(resources[0].updatedAt)}` : "Sin contenido publicado"}</span></div>{resources.length ? <div className="all-resources">{resources.map((resource) => <ResourceCard resource={resource} key={resource.id} />)}</div> : <div className="catalog-empty"><FileText /><h3>Aún no hay recursos generales publicados</h3><p>Cuando el administrador publique el primero, estará disponible inmediatamente en esta biblioteca.</p></div>}</section></main>;
 }

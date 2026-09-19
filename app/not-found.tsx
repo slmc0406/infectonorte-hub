@@ -1,20 +1,8 @@
-import { SiteHeader } from '@/components/site-header';
-import { SiteFooter } from '@/components/site-footer';
-import { EmptyState } from '@/components/empty-state';
+import Link from "next/link";
+import { ArrowLeft, FileQuestion } from "lucide-react";
+import { EcosystemBrand } from "@/components/brand";
+import { Button } from "@/components/ui/button";
 
 export default function NotFound() {
-  return (
-    <>
-      <SiteHeader />
-      <main className="container-hub py-20">
-        <EmptyState
-          title="No encontramos esta página"
-          description="El enlace puede estar mal escrito o el contenido ya no está disponible."
-          actionLabel="Volver a la biblioteca"
-          actionHref="/biblioteca"
-        />
-      </main>
-      <SiteFooter />
-    </>
-  );
+  return <main className="not-found-page"><section><EcosystemBrand compact /><FileQuestion aria-hidden="true" /><span className="section-kicker">Contenido no encontrado</span><h1>Este enlace no está disponible.</h1><p>Puede que el recurso haya sido archivado, el código institucional no exista o el enlace esté incompleto.</p><div><Button asChild><Link href="/"><ArrowLeft /> Volver al inicio</Link></Button><Button variant="outline" asChild><Link href="/biblioteca">Ir a la biblioteca</Link></Button></div></section></main>;
 }
