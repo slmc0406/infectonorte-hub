@@ -51,7 +51,16 @@ export async function createAdminSession(email: string, secret: string) {
 
 export async function readAdminSession(value: string | undefined, secret: string) {
   if (!value || !secret) return null;
-  const [encodedEmail, expiresText, signature] = value.split(".");
+  // El correo administrador puede contener puntos (p. ej. "usuario@empresa.com"),
+  // así que no podemos hacer value.split(".") a secas: eso rompe el token en más de
+  // 3 partes. expires (dígitos) y signature (hex) nunca llevan punto, así que
+  // localizamos los dos últimos puntos desde el final para separar sin ambigüedad.
+  const lastDot = value.lastIndexOf(".");
+  const secondLastDot = lastDot === -1 ? -1 : value.lastIndexOf(".", lastDot - 1);
+  if (lastDot === -1 || secondLastDot === -1) return null;
+  const encodedEmail = value.slice(0, secondLastDot);
+  const expiresText = value.slice(secondLastDot + 1, lastDot);
+  const signature = value.slice(lastDot + 1);
   const expires = Number(expiresText);
   if (!encodedEmail || !signature || !Number.isFinite(expires) || expires < Date.now()) return null;
   const payload = `${encodedEmail}.${expires}`;
