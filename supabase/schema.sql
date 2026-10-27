@@ -25,6 +25,7 @@ create table if not exists public.resources (
   mime_type text not null,
   file_size bigint not null,
   checksum text not null default '',
+  thumb_key text,
   created_by text not null,
   created_at bigint not null,
   updated_at bigint not null

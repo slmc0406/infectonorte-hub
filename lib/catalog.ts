@@ -11,6 +11,7 @@ export type CatalogResource = {
   fileName: string;
   fileSize: number;
   updatedAt: number;
+  thumbKey?: string | null;
 };
 
 export async function getPublicResources(limit?: number) {
@@ -29,7 +30,4 @@ export async function getPublicResource(id: string) {
   return data ? mapResource(data) as unknown as CatalogResource & { createdBy: string; createdAt: number } : null;
 }
 
-export function formatCatalogDate(value: number) {
-  return new Intl.DateTimeFormat("es-CO", { day: "2-digit", month: "short", year: "numeric" })
-    .format(new Date(value)).replace(" de ", " ").replace(" de ", " ");
-}
+export { formatCatalogDate } from "@/lib/format";

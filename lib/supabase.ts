@@ -46,7 +46,7 @@ export function mapResource(row: Record<string, unknown>) {
     id: row.id, title: row.title, description: row.description, type: row.type, category: row.category,
     status: row.status, visibility: row.visibility, institutionId: row.institution_id,
     institutionName: row.institution_name, version: row.version, fileKey: row.file_key,
-    fileName: row.file_name, mimeType: row.mime_type, fileSize: row.file_size, checksum: row.checksum,
+    fileName: row.file_name, mimeType: row.mime_type, fileSize: row.file_size, checksum: row.checksum, thumbKey: row.thumb_key ?? null,
     createdBy: row.created_by, createdAt: row.created_at, updatedAt: row.updated_at,
   };
 }
