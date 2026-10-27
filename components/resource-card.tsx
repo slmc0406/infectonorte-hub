@@ -15,8 +15,8 @@ export function resourceKindLabel(type: string) {
   return type;
 }
 
-export function ResourceCard({ resource }: { resource: CatalogResource }) {
-  return <Link href={`/recursos/${resource.id}`} className="resource-card">
+export function ResourceCard({ resource, directFile = false }: { resource: CatalogResource; directFile?: boolean }) {
+  const body = <>
     <div className="resource-thumb">
       {resource.thumbKey
         // eslint-disable-next-line @next/next/no-img-element
@@ -32,5 +32,8 @@ export function ResourceCard({ resource }: { resource: CatalogResource }) {
       {resource.description && <p>{resource.description}</p>}
       <div className="resource-footer"><span>v{resource.version} · {formatCatalogDate(resource.updatedAt)}</span></div>
     </div>
-  </Link>;
+  </>;
+  return directFile
+    ? <a href={`/api/resources/${resource.id}`} target="_blank" rel="noreferrer" className="resource-card">{body}</a>
+    : <Link href={`/recursos/${resource.id}`} className="resource-card">{body}</Link>;
 }
