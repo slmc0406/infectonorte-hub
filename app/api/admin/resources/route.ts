@@ -1,5 +1,6 @@
 import { getAdminUser } from "@/lib/admin-auth";
 import { validateClinicalFile } from "@/lib/file-validation";
+import { derivePdf, storeThumbnail } from "@/lib/pdf-derived";
 import { removeStoredFile, supabaseAdmin, throwIfError, uploadStoredFile } from "@/lib/supabase";
 
 export async function POST(request: Request) {
@@ -23,10 +24,12 @@ export async function POST(request: Request) {
   const id = crypto.randomUUID();
   const fileKey = `resources/${id}/${validated.safeName}`;
   await uploadStoredFile(fileKey, validated.bytes, validated.mimeType);
+  const derived = validated.mimeType === "application/pdf" ? await derivePdf(validated.bytes) : { text: null, thumbnail: null };
+  const thumbKey = await storeThumbnail(id, derived);
   const now = Date.now();
   try {
     const client = supabaseAdmin();
-    const { error } = await client.from("resources").insert({ id, title, description, type, category, status, visibility, institution_id: institutionId, version: 1, file_key: fileKey, file_name: file.name, mime_type: validated.mimeType, file_size: file.size, checksum: validated.checksum, created_by: user.email, created_at: now, updated_at: now });
+    const { error } = await client.from("resources").insert({ id, title, description, type, category, status, visibility, institution_id: institutionId, version: 1, file_key: fileKey, file_name: file.name, mime_type: validated.mimeType, file_size: file.size, checksum: validated.checksum, thumb_key: thumbKey, content_text: derived.text, created_by: user.email, created_at: now, updated_at: now });
     throwIfError(error);
     const { error: versionError } = await client.from("resource_versions").insert({ id: crypto.randomUUID(), resource_id: id, version: 1, file_key: fileKey, file_name: file.name, mime_type: validated.mimeType, file_size: file.size, checksum: validated.checksum, created_by: user.email, created_at: now });
     throwIfError(versionError);
@@ -34,6 +37,7 @@ export async function POST(request: Request) {
     throwIfError(auditError);
   } catch (error) {
     await removeStoredFile(fileKey).catch(() => undefined);
+    if (thumbKey) await removeStoredFile(thumbKey).catch(() => undefined);
     throw error;
   }
   return Response.json({ resource: { id, title, fileName: file.name, status, visibility, institutionId } }, { status: 201 });

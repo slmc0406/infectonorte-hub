@@ -26,6 +26,7 @@ create table if not exists public.resources (
   file_size bigint not null,
   checksum text not null default '',
   thumb_key text,
+  content_text text,
   created_by text not null,
   created_at bigint not null,
   updated_at bigint not null
@@ -94,3 +95,28 @@ insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_typ
 values ('hub-documents', 'hub-documents', false, 26214400,
   array['application/pdf','image/png','image/jpeg','image/webp','application/vnd.openxmlformats-officedocument.presentationml.presentation'])
 on conflict (id) do update set public = false, file_size_limit = excluded.file_size_limit, allowed_mime_types = excluded.allowed_mime_types;
+
+-- Búsqueda por contenido (texto extraído de los PDF), sin tildes y con raíces en español.
+create extension if not exists unaccent with schema extensions;
+create text search configuration public.hub_spanish (copy = pg_catalog.spanish);
+alter text search configuration public.hub_spanish
+  alter mapping for hword, hword_part, word with extensions.unaccent, pg_catalog.spanish_stem;
+alter table public.resources add column if not exists search_tsv tsvector generated always as (
+  setweight(to_tsvector('public.hub_spanish', coalesce(title,'') || ' ' || coalesce(category,'')), 'A') ||
+  setweight(to_tsvector('public.hub_spanish', coalesce(description,'')), 'B') ||
+  setweight(to_tsvector('public.hub_spanish', coalesce(content_text,'')), 'C')
+) stored;
+create index if not exists resources_search_tsv_idx on public.resources using gin (search_tsv);
+create or replace function public.hub_search(q text, inst uuid default null)
+returns table(id uuid, rank real, snippet text) language sql stable set search_path = public, extensions as $$
+  with qq as (select websearch_to_tsquery('public.hub_spanish', q) as tsq)
+  select r.id, ts_rank(r.search_tsv, qq.tsq) as rank,
+         ts_headline('public.hub_spanish', left(coalesce(nullif(r.content_text, ''), r.title), 120000), qq.tsq,
+                     'MaxWords=30,MinWords=14,ShortWord=3,MaxFragments=1,StartSel=«,StopSel=»') as snippet
+  from public.resources r, qq
+  where r.status = 'published' and (r.visibility = 'general' or (inst is not null and r.institution_id = inst))
+    and r.search_tsv @@ qq.tsq
+  order by rank desc limit 40;
+$$;
+revoke all on function public.hub_search(text, uuid) from public, anon, authenticated;
+grant execute on function public.hub_search(text, uuid) to service_role;

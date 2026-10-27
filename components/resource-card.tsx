@@ -15,12 +15,16 @@ export function resourceKindLabel(type: string) {
   return type;
 }
 
-export function ResourceCard({ resource, directFile = false }: { resource: CatalogResource; directFile?: boolean }) {
+export function Highlighted({ text }: { text: string }) {
+  return <>{text.split(/(«[^»]*»)/g).map((part, index) => part.startsWith("«") ? <mark key={index}>{part.slice(1, -1)}</mark> : <span key={index}>{part}</span>)}</>;
+}
+
+export function ResourceCard({ resource, directFile = false, snippet }: { resource: CatalogResource; directFile?: boolean; snippet?: string }) {
   const body = <>
     <div className="resource-thumb">
       {resource.thumbKey
         // eslint-disable-next-line @next/next/no-img-element
-        ? <img src={`/api/resources/${resource.id}/thumb`} alt={`Vista previa de ${resource.title}`} loading="lazy" decoding="async" />
+        ? <img src={`/api/resources/${resource.id}/thumb?v=${resource.updatedAt}`} alt={`Vista previa de ${resource.title}`} loading="lazy" decoding="async" />
         : <span className="resource-thumb-fallback"><ResourceGlyph type={resource.type} /></span>}
     </div>
     <div className="resource-body">
@@ -29,7 +33,7 @@ export function ResourceCard({ resource, directFile = false }: { resource: Catal
         <span className="resource-category">{resource.category}</span>
       </div>
       <h3>{resource.title}</h3>
-      {resource.description && <p>{resource.description}</p>}
+      {snippet ? <p className="resource-snippet"><Highlighted text={snippet} /></p> : resource.description && <p>{resource.description}</p>}
       <div className="resource-footer"><span>v{resource.version} · {formatCatalogDate(resource.updatedAt)}</span></div>
     </div>
   </>;

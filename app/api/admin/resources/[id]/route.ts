@@ -1,5 +1,6 @@
 import { getAdminUser } from "@/lib/admin-auth";
 import { validateClinicalFile } from "@/lib/file-validation";
+import { derivePdf, storeThumbnail } from "@/lib/pdf-derived";
 import { removeStoredFile, supabaseAdmin, throwIfError, uploadStoredFile } from "@/lib/supabase";
 
 export async function PATCH(request: Request, context: { params: Promise<{ id: string }> }) {
@@ -45,13 +46,16 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
   const nextVersion = current.version + 1;
   const fileKey = `resources/${id}/v${nextVersion}-${validated.safeName}`;
   await uploadStoredFile(fileKey, validated.bytes, validated.mimeType);
+  const derived = validated.mimeType === "application/pdf" ? await derivePdf(validated.bytes) : { text: null, thumbnail: null };
+  const thumbKey = await storeThumbnail(id, derived, nextVersion);
   const now = Date.now();
   try {
-    const { error } = await client.from("resources").update({ version: nextVersion, file_key: fileKey, file_name: file.name, mime_type: validated.mimeType, file_size: file.size, checksum: validated.checksum, updated_at: now }).eq("id", id); throwIfError(error);
+    const { error } = await client.from("resources").update({ version: nextVersion, file_key: fileKey, file_name: file.name, mime_type: validated.mimeType, file_size: file.size, checksum: validated.checksum, thumb_key: thumbKey, content_text: derived.text, updated_at: now }).eq("id", id); throwIfError(error);
     const { error: versionError } = await client.from("resource_versions").insert({ id: crypto.randomUUID(), resource_id: id, version: nextVersion, file_key: fileKey, file_name: file.name, mime_type: validated.mimeType, file_size: file.size, checksum: validated.checksum, created_by: user.email, created_at: now }); throwIfError(versionError);
     const { error: auditError } = await client.from("audit_log").insert({ id: crypto.randomUUID(), actor_email: user.email, action: "replaced", entity_type: "resource", entity_id: id, detail: `${current.title} · v${nextVersion}`, created_at: now }); throwIfError(auditError);
   } catch (error) {
     await removeStoredFile(fileKey).catch(() => undefined);
+    if (thumbKey) await removeStoredFile(thumbKey).catch(() => undefined);
     throw error;
   }
   return Response.json({ ok: true, version: nextVersion });

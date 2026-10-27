@@ -7,7 +7,8 @@ import { formatCatalogDate } from "@/lib/format";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ResourceCard, resourceKindLabel } from "@/components/resource-card";
+import { Highlighted, ResourceCard, resourceKindLabel } from "@/components/resource-card";
+import { useContentSearch } from "@/lib/use-content-search";
 
 const KINDS = [
   { value: "Todos", label: "Todo" },
@@ -20,6 +21,7 @@ export function SearchExperience({ resources, compact = false, initialArea = "To
   const [area, setArea] = useState(initialArea);
   const [kind, setKind] = useState("Todos");
   const inputRef = useRef<HTMLInputElement>(null);
+  const contentHits = useContentSearch(query);
   const resultsId = compact ? "home-search-results" : "library-search-results";
   const areas = useMemo(() => {
     const counts = new Map<string, number>();
@@ -33,13 +35,16 @@ export function SearchExperience({ resources, compact = false, initialArea = "To
   }, [resources]);
   const results = useMemo(() => {
     const term = query.toLowerCase().trim();
-    return resources.filter((item) => {
+    const filtered = resources.filter((item) => {
       const matchesArea = area === "Todos" || item.category === area;
       const matchesKind = kind === "Todos" || item.type === kind;
       const haystack = [item.title, item.description, item.category, item.type, resourceKindLabel(item.type), item.fileName].join(" ").toLowerCase();
-      return matchesArea && matchesKind && (!term || haystack.includes(term));
+      return matchesArea && matchesKind && (!term || haystack.includes(term) || contentHits.has(item.id));
     });
-  }, [query, area, kind, resources]);
+    if (!term) return filtered;
+    const titleMatch = (item: CatalogResource) => `${item.title} ${item.category}`.toLowerCase().includes(term);
+    return [...filtered].sort((a, b) => Number(titleMatch(b)) - Number(titleMatch(a)) || (contentHits.get(b.id)?.rank || 0) - (contentHits.get(a.id)?.rank || 0));
+  }, [query, area, kind, resources, contentHits]);
   useEffect(() => {
     function focusSearch(event: KeyboardEvent) {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
@@ -58,7 +63,7 @@ export function SearchExperience({ resources, compact = false, initialArea = "To
   if (compact) {
     return <div className="search-experience compact">
       {searchBox}
-      {query && <div className="search-results" id={resultsId}><div className="results-heading" role="status" aria-live="polite"><span>{results.length} resultados</span><span>Contenido publicado</span></div>{results.map((resource) => <Link href={`/recursos/${resource.id}`} className="result-row" key={resource.id}><div><div className="result-meta"><Badge variant="secondary">{resourceKindLabel(resource.type)}</Badge><span>{resource.category}</span></div><h3>{resource.title}</h3>{resource.description && <p>{resource.description}</p>}</div><span className="status-dot">Publicado</span></Link>)}{!results.length && <div className="empty-result"><h3>No encontramos coincidencias</h3><p>Prueba otro término.</p><Button size="sm" variant="outline" onClick={() => setQuery("")}>Limpiar búsqueda</Button></div>}</div>}
+      {query && <div className="search-results" id={resultsId}><div className="results-heading" role="status" aria-live="polite"><span>{results.length} resultados</span><span>Contenido publicado</span></div>{results.map((resource) => <Link href={`/recursos/${resource.id}`} className="result-row" key={resource.id}><div><div className="result-meta"><Badge variant="secondary">{resourceKindLabel(resource.type)}</Badge><span>{resource.category}</span></div><h3>{resource.title}</h3>{contentHits.get(resource.id)?.snippet ? <p><Highlighted text={contentHits.get(resource.id)!.snippet} /></p> : resource.description && <p>{resource.description}</p>}</div><span className="status-dot">Publicado</span></Link>)}{!results.length && <div className="empty-result"><h3>No encontramos coincidencias</h3><p>Prueba otro término.</p><Button size="sm" variant="outline" onClick={() => setQuery("")}>Limpiar búsqueda</Button></div>}</div>}
     </div>;
   }
 
@@ -80,6 +85,6 @@ export function SearchExperience({ resources, compact = false, initialArea = "To
       {isFiltering && <button type="button" className="clear-filters" onClick={clearFilters}><X size={14} />Limpiar</button>}
     </div>
     <div className="library-count" role="status" aria-live="polite"><strong>{results.length} {results.length === 1 ? "recurso" : "recursos"}{isFiltering ? " encontrados" : " publicados"}</strong><span>{resources[0] ? `Actualizada ${formatCatalogDate(resources[0].updatedAt)}` : "Sin contenido publicado"}</span></div>
-    {results.length ? <div className="all-resources">{results.map((resource) => <ResourceCard resource={resource} key={resource.id} />)}</div> : resources.length ? <div className="catalog-empty"><FileText /><h3>No encontramos coincidencias</h3><p>Prueba otro término o elimina los filtros.</p><Button size="sm" variant="outline" onClick={clearFilters}>Limpiar filtros</Button></div> : <div className="catalog-empty"><FileText /><h3>Aún no hay recursos generales publicados</h3><p>Cuando el administrador publique el primero, estará disponible inmediatamente en esta biblioteca.</p></div>}
+    {results.length ? <div className="all-resources">{results.map((resource) => <ResourceCard resource={resource} snippet={query ? contentHits.get(resource.id)?.snippet : undefined} key={resource.id} />)}</div> : resources.length ? <div className="catalog-empty"><FileText /><h3>No encontramos coincidencias</h3><p>Prueba otro término o elimina los filtros.</p><Button size="sm" variant="outline" onClick={clearFilters}>Limpiar filtros</Button></div> : <div className="catalog-empty"><FileText /><h3>Aún no hay recursos generales publicados</h3><p>Cuando el administrador publique el primero, estará disponible inmediatamente en esta biblioteca.</p></div>}
   </div>;
 }
